@@ -1,16 +1,15 @@
 package DBIx::NamedBinding;
 
+use 5.006;
 use warnings;
 use strict;
 
 use DBI;
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 our @ISA     = 'DBI';
 
 package DBIx::NamedBinding::db;
 BEGIN { our @ISA = ('DBI::db') }
-
-my %position_of;
 
 sub prepare {
     my ($dbh, $statement, @args) = @_;
@@ -28,20 +27,25 @@ package DBIx::NamedBinding::st;
 BEGIN { our @ISA = ('DBI::st') }
 
 sub bind_param {
-    my ($sth, $param, $value) = @_;
-    Carp::croak('missing parameter') if !defined $param || !$param;
-    return $sth->set_err(1234, "Missing named binding parameter", undef, "bind_param")
+    my ($sth, $param, $value, $attr) = @_;
+    return $sth->set_err($DBI::stderr, "Missing named binding parameter", undef, "bind_param")
         if !defined $param || !$param;
-    return $sth->set_err(1234, "Invalid named binding parameter", undef, "bind_param")
+    return $sth->set_err($DBI::stderr, "Invalid named binding parameter", undef, "bind_param")
         if $param =~ /\W/;
     my $param_pos = $sth->{private_namedbinding_pos};
     if ($param !~ /^\d+\Z/) {
-        return $sth->set_err(1234, "Named binding identifier '$param' was not used in preparing this statement handle",
+        return $sth->set_err($DBI::stderr, "Named binding identifier '$param' was not used in preparing this statement handle",
             undef, "bind_param")
             if ! exists $param_pos->{$param};
         $param = $param_pos->{$param};
     }
-    $sth->SUPER::bind_param($param, $value);
+    $sth->SUPER::bind_param($param, $value, $attr);
+}
+
+sub execute {
+    my ($sth, @params) = @_;
+    # I want to optionally handle named parameters via the execute method too
+    $sth->SUPER::execute(@params);
 }
 
 1;

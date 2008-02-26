@@ -1,9 +1,10 @@
 #!perl
 
+use 5.006;
 use strict;
 use warnings;
 
-use Test::More tests => 7;
+use Test::More tests => 11;
 use DBI;
 
 my $dbh;
@@ -31,7 +32,11 @@ ok( $sth = $dbh->prepare('SELECT foo FROM bar WHERE foo > :foo'),
     'Prepare SELECT'
 );
 
-ok( $sth->execute( 3 ), 'Execute query');
+ok( ! defined $sth->bind_param(  ), 'Undefined parameter name' );
+ok( ! defined $sth->bind_param( '' => 0  ), 'Missing parameter name');
+ok( ! defined $sth->bind_param( gorp => 0 ), 'Using undeclared parameter placeholder');
+ok( $sth->bind_param( foo => 3 ), 'Bind parameter value');
+ok( $sth->execute(), 'Execute query');
 
 cmp_ok( $sth->fetchrow_array, '==', 4, 'Get 4');
 cmp_ok( $sth->fetchrow_array, '==', 5, 'Get 5');
